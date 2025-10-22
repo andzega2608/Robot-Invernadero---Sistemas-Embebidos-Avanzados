@@ -11,6 +11,7 @@ const char* mqtt_server = "192.168.84.15";
 
 // Declaracion de Tópicos
 const char* topicDirection = "Motor/Direction";
+const char* topicServo = "Servo/Action";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -88,8 +89,6 @@ void applyMotorControl(String direction) {
     digitalWrite(pinIN4, LOW);
     ledcWrite(canalA, 0);
     ledcWrite(canalB, 0);
-    servo.write(180);
-    delay(1000);
   }
 }
 
@@ -97,6 +96,13 @@ void applyMotorControl(String direction) {
 void callback(char* topic, byte* payload, unsigned int length) {
   String message;
   for (unsigned int i = 0; i < length; i++) message += (char)payload[i];
+  /*if (String(topic) == topicDirection){
+    applyMotorControl(message);
+  }
+  if (String(topic) == topicServo){
+    int angle = constrain(message.toInt(), 0, 180);
+    servo.write(angle);
+  }*/
   applyMotorControl(message);
 }
 
@@ -106,8 +112,8 @@ void reconnect() {
     Serial.print("Conectando al broker...");
     if (client.connect("ESP32Client2")) {
       Serial.println("Conectado");
-      client.subscribe(topicSpeed);
       client.subscribe(topicDirection);
+      client.subscribe(topicServo);
       Serial.println("Suscrito a tópicos");
     } else {
       Serial.print("Error: ");
