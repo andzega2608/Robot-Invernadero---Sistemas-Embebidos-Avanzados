@@ -58,8 +58,9 @@ void reconnect() {
     Serial.print("Conectando al broker...");
     if (client.connect("ESP32Client1")) {
       Serial.println("Conectado");
-      client.subscribe(topicSpeed);
-      client.subscribe(topicDirection);
+      client.subscribe(topicTemperatura);
+      client.subscribe(topicHumedad);
+      client.subscribe(topicVentilador);
       Serial.println("Suscrito a tópicos");
     } else {
       Serial.print("Error: ");
