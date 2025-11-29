@@ -7,7 +7,6 @@ const char* WIFI_PASS = "andresZT8";
 
 WebServer server(80);
 
-// Usar solo UNA resolución baja para minimizar procesamiento
 static auto lowRes = esp32cam::Resolution::find(320, 240);
 
 void serveJpg() {
@@ -34,15 +33,15 @@ void setup() {
   esp32cam::Config cfg;
   cfg.setPins(esp32cam::pins::AiThinker);
   cfg.setResolution(lowRes);
-  cfg.setBufferCount(2);      // Mínimo de buffers
-  cfg.setJpeg(30);            // Calidad JPEG muy baja para menos datos
+  cfg.setBufferCount(2);      
+  cfg.setJpeg(30);            
   
-  esp32cam::Camera.begin(cfg);  // ✅ CORREGIDO: Namespace agregado
+  esp32cam::Camera.begin(cfg); 
 
   // WiFi con máxima optimización
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
-  WiFi.setSleep(WIFI_PS_NONE); // Sin power saving
+  WiFi.setSleep(WIFI_PS_NONE); 
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   
   while (WiFi.status() != WL_CONNECTED) {
