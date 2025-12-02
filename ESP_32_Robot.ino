@@ -6,7 +6,7 @@
 // Declaración de SSID y Broker
 const char* ssid = "AndresProyecto";
 const char* password = "andresZT8";
-const char* mqtt_server = "192.168.246.15";
+const char* mqtt_server = "10.147.13.15";
 
 // Declaración de Tópicos
 const char* topicDirection = "Motor/Direction";
@@ -23,18 +23,24 @@ const int pinIN3 = 19;
 const int pinIN4 = 18;
 
 // Declaración de sensores ultrasónicos
-const int pinTrigIzq = 13;
-const int pinEchoIzq = 14;
-const int pinTrigDer = 26;
-const int pinEchoDer = 33;
+const int pinTrigIzq = 26;  
+const int pinEchoIzq = 33;
+const int pinTrigDer = 13;  
+const int pinEchoDer = 14;
+const int pinTrigAde = 32;  
+const int pinEchoAde = 35;
 
 // Variables de distancia y control autónomo
 float distanciaIzq = 0;
 float distanciaDer = 0;
-const float margen = 5.0;
+float distanciaAde = 0;
+const float ref = 20.0;   // Distancia de referencia (cm)
+const float margen = 5.0; 
+
+
 int velocidad = 100;
-const int velMin = 60;
-const int velMax = 140;
+const int velMin = 80;
+const int velMax = 120;
 bool modoAutomatico = false;
 
 // Control PWM
@@ -43,9 +49,8 @@ const int canalB = 8;
 const int frecuencia = 1000;
 const int resolucion = 8;
 
-const int motorSpeed = 255;
-
-const int relePin = 4;
+const int motorSpeed = 120;
+const int relePin = 12;
 
 // Función para conexión con WiFi
 void setup_wifi() {
@@ -61,15 +66,17 @@ void setup_wifi() {
 }
 
 // Función para limitar velocidad
-int speedLimit(int v) {
-  if (v < velMin) return velMin;
-  if (v > velMax) return velMax;
+int limitarVelocidad(int v) {
+  if (v < velMin) 
+    return velMin;
+  if (v > velMax) 
+    return velMax;
   return v;
 }
 
-// Funciones de movimiento
-void foward(int v) {
-  v = speedLimit(v);
+// Funciones de movimiento recto autónomo
+void adelante(int v) {
+  v = limitarVelocidad(v);
   digitalWrite(pinIN1, LOW);
   digitalWrite(pinIN2, HIGH);
   digitalWrite(pinIN3, LOW);
@@ -78,7 +85,7 @@ void foward(int v) {
   ledcWrite(canalB, v);
 }
 
-void stopMotors() {
+void parar() {
   digitalWrite(pinIN1, LOW);
   digitalWrite(pinIN2, LOW);
   digitalWrite(pinIN3, LOW);
@@ -87,8 +94,8 @@ void stopMotors() {
   ledcWrite(canalB, 0);
 }
 
-void turnLeft(int v) {
-  v = speedLimit(v);
+void girarIzquierda(int v) {
+  v = limitarVelocidad(v);
   digitalWrite(pinIN1, HIGH);
   digitalWrite(pinIN2, LOW);
   digitalWrite(pinIN3, LOW);
@@ -97,14 +104,58 @@ void turnLeft(int v) {
   ledcWrite(canalB, v);
 }
 
-void turnRight(int v) {
-  v = speedLimit(v);
+void girarDerecha(int v) {
+  v = limitarVelocidad(v);
   digitalWrite(pinIN1, LOW);
   digitalWrite(pinIN2, HIGH);
   digitalWrite(pinIN3, HIGH);
   digitalWrite(pinIN4, LOW);
   ledcWrite(canalA, v);
   ledcWrite(canalB, v / 2);
+}
+
+void recto() {
+  float error = distanciaDer - distanciaIzq;
+  float Kp = 6.5;
+  int correccion = Kp * error;
+  int velIzq = limitarVelocidad(velocidad - correccion);
+  int velDer = limitarVelocidad(velocidad + correccion);
+  if (distanciaIzq < 5 && distanciaDer < 5) {
+    parar();
+    return;
+  }
+  digitalWrite(pinIN1, LOW);
+  digitalWrite(pinIN2, HIGH);
+  digitalWrite(pinIN3, LOW);
+  digitalWrite(pinIN4, HIGH);
+  ledcWrite(canalA, velIzq);
+  ledcWrite(canalB, velDer);
+  delay(40);
+}
+
+// Funciones para giro autónomo
+void giroDer(){
+  digitalWrite(pinIN1, LOW);
+  digitalWrite(pinIN2, HIGH);
+  digitalWrite(pinIN3, HIGH);
+  digitalWrite(pinIN4, LOW);
+  ledcWrite(canalA, 160);
+  ledcWrite(canalB, 160);
+}
+
+void giroIzq(){
+  digitalWrite(pinIN1, HIGH);
+  digitalWrite(pinIN2, LOW);
+  digitalWrite(pinIN3, LOW);
+  digitalWrite(pinIN4, HIGH);
+  ledcWrite(canalA, 200);
+  ledcWrite(canalB, 200);
+}
+
+void delayExacto(unsigned long ms) {
+    unsigned long fin = micros() + ms * 1000;
+    while (micros() < fin) {
+    }
 }
 
 // Funciones ultrasónicas
@@ -121,34 +172,64 @@ unsigned long leerDistanciaUltrasonido(int pinTrigger, int pinEcho) {
 
 float distanciaCM(int pinTrig, int pinEcho) {
   unsigned long duracion = leerDistanciaUltrasonido(pinTrig, pinEcho);
-  return 0.01723 * duracion;
+  return 0.01723 * duracion; // cm
 }
 
 // Función de navegación autónoma
-void controlCentrado() {
+void controlAutonomo() {
   distanciaIzq = distanciaCM(pinTrigIzq, pinEchoIzq);
   distanciaDer = distanciaCM(pinTrigDer, pinEchoDer);
-  Serial.print("Izquierda: ");
-  Serial.print(distanciaIzq);
-  Serial.print(" cm | Derecha: ");
-  Serial.print(distanciaDer);
-  Serial.println(" cm");
-
-  if (distanciaIzq < 5 && distanciaDer < 5) {
-    stopMotors();
-    Serial.println("Deteniendo");
-  }
-  else if (abs(distanciaIzq - distanciaDer) <= margen) {
-    foward(velocidad);
-    Serial.println("Avanza recto");
-  }
-  else if (distanciaIzq < distanciaDer) {
-    turnRight(velocidad);
-    Serial.println("Girando derecha");
+  distanciaAde = distanciaCM(pinTrigAde, pinEchoAde);
+  Serial.println(distanciaIzq);
+  Serial.println(distanciaDer);
+  Serial.println(distanciaAde);
+  if ((distanciaIzq > 20.0) || (distanciaDer > 20.0)) {
+    parar();
+    delay(1000);
+    adelante(velocidad);
+    delay(200);
+    distanciaIzq = distanciaCM(pinTrigIzq, pinEchoIzq);
+    distanciaDer = distanciaCM(pinTrigDer, pinEchoDer);
+    distanciaAde = distanciaCM(pinTrigAde, pinEchoAde);
+    if (distanciaDer > 20.0) {
+      giroDer();
+      delayExacto(600);
+      parar();
+      delay(1000);
+      adelante(160);
+      delayExacto(400);
+      parar();
+      delay(1000);
+    }
+    else {
+      if (distanciaAde > 30.0){
+        adelante(160);
+        delayExacto(400);
+        parar();
+        delay(1000);
+      }
+      else{
+        giroIzq();
+        delayExacto(700);
+        parar();
+        delay(1000);
+        adelante(160);
+        delay(400);
+        parar();
+        delay(1000);
+      }
+    }
   }
   else {
-    turnLeft(velocidad);
-    Serial.println("Girando izquierda");
+    if ((distanciaAde < 15.0) && (distanciaAde > 1.0)){
+      parar();
+      delay(2000);
+      giroIzq();
+      delayExacto(700);
+    }
+    else {
+      adelante(200);
+    }
   }
 }
 
@@ -161,10 +242,9 @@ void applyMotorControl(String direction) {
   }
   if (direction == "S") {
     modoAutomatico = false;
-    stopMotors();
+    parar();
     return;
   }
-
   if (!modoAutomatico) {
     if (direction == "B") {
       digitalWrite(pinIN1, HIGH);
@@ -199,9 +279,9 @@ void applyMotorControl(String direction) {
       ledcWrite(canalB, motorSpeed);
     }
     else if (direction == "P") {
-      digitalWrite(relePin, LOW);
-      delay(2000);
       digitalWrite(relePin, HIGH);
+      delay(2000);
+      digitalWrite(relePin, LOW);
     }
   }
 }
@@ -245,7 +325,7 @@ void setup() {
   pinMode(pinIN3, OUTPUT);
   pinMode(pinIN4, OUTPUT);
   pinMode(relePin, OUTPUT);
-  digitalWrite(relePin, HIGH);
+  digitalWrite(relePin, LOW);
   ledcSetup(canalA, frecuencia, resolucion);
   ledcSetup(canalB, frecuencia, resolucion);
   ledcAttachPin(pinENA, canalA);
@@ -260,6 +340,6 @@ void loop() {
   if (!client.connected()) reconnect();
   client.loop();
   if (modoAutomatico) {
-    controlCentrado();
+    controlAutonomo();
   }
 }
