@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EYAA - Cámara</title>
+
+  <style>
+    body {
+      background: linear-gradient(to left, #9effa5, #DBC9F5);
+      margin: 0;
+      text-align: center;
+      font-family: Georgia, serif;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: white;
+      box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+      padding: 10px 20px;
+    }
+
+    .logo img {
+      width: 120px;
+      margin-left: 30px;
+    }
+
+    nav a {
+      color: #002855;
+      font-weight: bold;
+      text-decoration: none;
+      margin: 0 15px;
+      font-size: 18px;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    h2 {
+      font-size: 32px;
+      margin-top: 40px;
+      color: #222;
+    }
+
+    #camStream {
+      width: 60%;
+      max-width: 600px;
+      border-radius: 10px;
+      margin-top: 20px;
+      box-shadow: 0px 0px 10px rgba(0,0,0,0.4);
+    }
+
+    #qrOutput {
+      font-size: 26px;
+      margin-top: 20px;
+      color: #002855;
+      font-weight: bold;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      font-size: 18px;
+      background-color: #5199e1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 18px;
+    }
+
+    .btn:hover {
+      background-color: #3b7fc1;
+    }
+  </style>
+
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+  <header>
+    <div class="logo">
+      <img src="https://consulting.construction/wp-content/uploads/2021/03/tecnologico-de-monterrey-blue.png" alt="Tec Logo">
+    </div>
+    <nav>
+     
+         <a href="project.html">About the project</a>
+        <a href="us.html">About the team</a>
+        <a href="cam.html">EYAAS' CAM</a>
+        <a href="control.html">EYAA'S CONTROL</a>
+        <a href="index.html">Home</a>
+    </nav>
+  </header>
+
+  <div class="panel">
+    <h2>Cámara en Vivo</h2>
+    <img id="camStream" src="" >
+    <h3>QR Detectado</h3>
+    <div id="qrOutput" style="font-size: 18px; color: #333; margin-top: 10px;">Esperando QR...</div>
+  </div>
+
+  <div class="panel">
+    <button class="btn" onclick="iniciarCamara()">🎥 Iniciar Cámara</button>
+  </div>
+
+  <script>
+    const socket = io();
+
+    // Recibir frames de video y actualizar la imagen
+    socket.on("videoFrame", (data) => {
+      document.getElementById("camStream").src = data;
+      console.log("Frame de video recibido");
+    });
+
+    // Recibir detección de QR y actualizar el texto
+    socket.on("qrDetectado", (data) => {
+      document.getElementById("qrOutput").innerText = data;
+    });
+
+    // Función para iniciar la cámara
+    function iniciarCamara() {
+      fetch("/iniciar-cam")
+        .then(response => {
+          if (!response.ok) throw new Error("Error en el servidor");
+          return response.text();
+        })
+        .then(msg => {
+          console.log("Cámara iniciada:", msg);
+          // Opcional: Cambiar el texto del botón o mostrar un mensaje
+        })
+        .catch(err => {
+          console.error("Error al iniciar cámara:", err);
+          alert("Error al iniciar la cámara. Revisa la consola.");
+        });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EYAA – Panel de Control del Invernadero Inteligente</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      body {
+        background: linear-gradient(to left, #bcffc0, #dbc9f5);
+        margin: 0;
+        text-align: center;
+        font-family: Georgia, serif;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        background-color: #ffffff;
+        box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+      }
+
+      .logo img {
+        width: 120px;
+        margin-left: 50px;
+        margin-right: 50px;
+      }
+
+      nav a {
+        text-decoration: none;
+        margin: 0 15px;
+        color: #2b2b2b;
+        font-weight: bold;
+        font-size: 18px;
+      }
+
+      main {
+        text-align: center;
+        padding: 40px;
+      }
+
+      h1 {
+        color: #000;
+        margin-bottom: 30px;
+        font-size: 50px;
+        font-weight: bold;
+      }
+
+      .logos {
+        justify-content: left;
+        width: 90%;
+        margin-top: 02px;
+      }
+
+      .logos img {
+        width: 1300px;
+        height: auto;
+        transform: translateX(250px);
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="logo">
+        <img
+          src="https://consulting.construction/wp-content/uploads/2021/03/tecnologico-de-monterrey-blue.png"
+          alt="Tec Logo"
+        />
+      </div>
+      <nav>
+        <a href="project.html">About the project</a>
+        <a href="us.html">About the team</a>
+        <a href="cam.html">EYAAS' CAM</a>
+        <a href="control.html">EYAA'S CONTROL</a>
+      </nav>
+    </header>
+
+    <main>
+      <h1>Greenhouse Robot – EYAA</h1>
+
+      <div class="logos">
+        <img src="EYAA.png" alt="EYAA Logo" />
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EYAA (EcoYield Agro Assistant) - Panel de Control</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      body {
+        background: linear-gradient(to left, #bcffc0, #dbc9f5);
+        width: 100%;
+        height: 230px;
+        margin: 0;
+        text-align: center;
+        font-family: Georgia, serif;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        background-color: #ffffff;
+        box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+      }
+
+      .logo img {
+        width: 100px;
+        height: auto;
+        margin-left: 50px;
+        margin-right: 50px;
+      }
+
+      nav a {
+        text-decoration: none;
+        margin: 0 15px;
+        color: #2b2b2b;
+        font-weight: bold;
+        font-size: 16px;
+      }
+
+      main {
+        text-align: center;
+        padding: 30px;
+      }
+
+      h1 {
+        color: #000000;
+        margin-bottom: 20px;
+      }
+
+      .panel {
+        display: inline-block;
+        padding: 20px;
+        margin: 15px;
+        border-radius: 10px;
+        background: #ffffff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        min-width: 250px;
+      }
+
+      .btn {
+        font-size: 20px;
+        margin: 10px;
+        padding: 15px 25px;
+        border: none;
+        border-radius: 8px;
+        background: #4caf50;
+        color: white;
+      }
+
+      .btn:hover {
+        background: #c8cfc8;
+      }
+
+      .btn-stop {
+        background: #d32f2f;
+      }
+      .btn-servo {
+        background: #ffa73b;
+      }
+      .btn-navegacion {
+        background: #5199e1;
+      }
+      .btn-auto {
+        background: #9c27b0;
+      }
+      .btn-auto-stop {
+        background: #9c27b0;
+      }
+
+      .gauges {
+        display: flex;
+        justify-content: center;
+        gap: 50px;
+        margin-top: 30px;
+        flex-wrap: wrap;
+      }
+
+      .gauge-container {
+        text-align: center;
+      }
+
+      canvas {
+        width: 250px !important;
+        height: 150px !important;
+      }
+
+      .sensor {
+        font-size: 18px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="logo">
+        <img
+          src="https://consulting.construction/wp-content/uploads/2021/03/tecnologico-de-monterrey-blue.png"
+          alt="Tec Logo"
+        />
+      </div>
+      <nav>
+        <a href="project.html">About the project</a>
+        <a href="us.html">About the team</a>
+        <a href="cam.html">EYAA'S CAM</a>
+        <a href="index.html">Home</a>
+    
+      </nav>
+    </header>
+
+    <main>
+      <h1>EYAA - Panel de Control - Manual Mode</h1>
+
+      <!-- MOVIMIENTO -->
+      <div class="panel">
+        <h2>Movimiento</h2>
+        <div>
+          <button class="btn" onclick="enviar('F')">⬆️ Forward</button><br />
+          <button class="btn" onclick="enviar('L')">⬅️ Left</button>
+          <button class="btn btn-stop" onclick="enviar('S')">🛑 Stop</button>
+          <button class="btn" onclick="enviar('R')">➡️ Right</button><br />
+          <button class="btn" onclick="enviar('B')">⬇️ Backward</button>
+        </div>
+      </div>
+
+      <!-- PLAGUICIDA -->
+      <div class="panel">
+        <h2>Plaguicida</h2>
+        <button class="btn btn-servo" onclick="servo('P')">
+          🧪 Activar Plaguicida
+        </button>
+      </div>
+
+      <!-- SENSORES -->
+      <div class="panel">
+        <h2>Sensores</h2>
+        <div class="gauges">
+          <div class="gauge-container">
+            <h3>Temperatura (°C)</h3>
+            <canvas id="tempGauge"></canvas>
+            <div class="sensor">🌡️ <span id="tempValue">--</span> °C</div>
+          </div>
+
+          <div class="gauge-container">
+            <h3>Humedad (%)</h3>
+            <canvas id="humGauge"></canvas>
+            <div class="sensor">💧 <span id="humValue">--</span> %</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NAVEGACIÓN AUTOMÁTICA -->
+      <div class="panel">
+        <h2>Navegación</h2>
+        <button class="btn btn-navegacion" onclick="nav('A')">
+          Activar Navegación Automática
+        </button>
+      </div>
+
+      <!-- SENSORES AUTOMÁTICO -->
+      <div class="panel">
+        <h2>Control Automático del Sensor</h2>
+        <button class="btn btn-auto" onclick="modoAuto(true)">
+          ✅ Activar Modo Automático
+        </button>
+        <button class="btn btn-auto-stop" onclick="modoAuto(false)">
+          ❌ Desactivar Modo Automático
+        </button>
+        <h3>Velocidad del Ventilador</h3>
+        <input
+          type="range"
+          id="fanSlider"
+          min="0"
+          max="255"
+          value="0"
+          oninput="actualizarFanManual(this.value)"
+        />
+        <p>Velocidad: <span id="fanSpeedLabel">0</span></p>
+      </div>
+    </main>
+
+    <script>
+      const socket = io();
+
+      function enviar(cmd) {
+        console.log("Enviando comando:", cmd);
+        socket.emit("comando", cmd);
+      }
+
+      function servo(action) {
+        console.log("Enviando servo:", action);
+        socket.emit("servo", action);
+      }
+
+      function nav(act) {
+        console.log("Enviando navegación:", act);
+        socket.emit("navegar", act);
+      }
+
+      function modoAuto(activo) {
+        console.log("Enviando modo auto:", activo ? "on" : "off");
+        socket.emit("autoSensor", activo ? "on" : "off");
+      }
+
+      function actualizarFanManual(valor) {
+        document.getElementById("fanSpeedLabel").innerText = valor;
+        console.log("Enviando velocidad fan:", valor);
+        socket.emit("fanSpeed", valor);
+      }
+
+      function iniciarCamara() {
+        fetch("/iniciar-cam")
+          .then((response) => response.text())
+          .then((msg) => console.log("Cámara iniciada:", msg))
+          .catch((err) => console.error("Error al iniciar cámara:", err));
+      }
+
+      /* --- GAUGES --- */
+      function crearGauge(ctx, color, max, labelStep) {
+        return new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            datasets: [
+              {
+                data: [0, 100],
+                backgroundColor: [color, "#e0e0e0"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            rotation: -90,
+            circumference: 180,
+            cutout: "70%",
+            plugins: {
+              tooltip: { enabled: false },
+              legend: { display: false },
+            },
+          },
+        });
+      }
+
+      const tempGauge = crearGauge(
+        document.getElementById("tempGauge"),
+        "#f44336",
+        60,
+        6
+      );
+      const humGauge = crearGauge(
+        document.getElementById("humGauge"),
+        "#2196f3",
+        100,
+        10
+      );
+
+      function actualizarGauge(g, v, max, id) {
+        v = parseFloat(v);
+        const p = Math.max(0, Math.min((v / max) * 100, 100));
+        g.data.datasets[0].data = [p, 100 - p];
+        g.update();
+        document.getElementById(id).innerText = v.toFixed(1);
+      }
+
+      socket.on("sensor", (data) => {
+        if (data.tipo === "temp")
+          actualizarGauge(tempGauge, data.valor, 60, "tempValue");
+        if (data.tipo === "hum")
+          actualizarGauge(humGauge, data.valor, 100, "humValue");
+      });
+
+      socket.on("autoStatus", (data) => {
+        console.log("Estado automático recibido:", data.status);
+      });
+
+      socket.on("fanSpeedUpdate", (data) => {
+        document.getElementById("fanSlider").value = data.speed;
+        document.getElementById("fanSpeedLabel").innerText = data.speed;
+        console.log("Velocidad del ventilador sincronizada:", data.speed);
+      });
+
+     
+    </script>
+  </body>
+</html>
